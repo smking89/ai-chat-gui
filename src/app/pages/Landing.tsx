@@ -43,8 +43,8 @@ const FAQ = [
     a: 'Builds are paid in Koba Coin, quoted per job when it runs. There is no fixed price list, because every brief is a different amount of work.',
   },
   {
-    q: 'Are the assets mine to use?',
-    a: 'Yes. A delivery is a plain bundle, not a locked export: prefabs and plugins for monuments, PNG maps for skins, map output for Terra.',
+    q: 'What can I do with a delivery?',
+    a: 'Each delivery is a plain, inspectable bundle — prefabs and their wiring plugin for monuments, a PBR texture set for skins, map output for Terra — so you can drop it onto your server and adjust it to fit.',
   },
   {
     q: 'Do I need an account?',
@@ -98,7 +98,7 @@ export function Landing() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}
-              className="mt-5 max-w-[880px] text-balance text-[40px] font-semibold leading-[1.02] tracking-[-0.035em] sm:text-[58px] md:text-[68px]"
+              className="mt-5 max-w-[880px] text-balance text-[40px] font-semibold leading-[1.02] tracking-[-0.035em] sm:text-[58px] lg:text-[68px]"
             >
               Describe the asset.
               <br />
@@ -164,7 +164,7 @@ export function Landing() {
             <h2 className="mt-3 max-w-[640px] text-balance text-[30px] font-semibold leading-[1.1] tracking-[-0.03em] md:text-[40px]">One brief in, one finished asset out.</h2>
             <p className="mt-3 max-w-[560px] text-[15px] leading-relaxed text-muted">Each model is its own pipeline with its own gates, parameters and delivery format. Pick one above the chat and describe the build.</p>
 
-            <div className="mt-10 grid gap-4 md:grid-cols-3">
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {MODELS.map((model) => (
                 <article key={model.id} className="flex flex-col rounded-card border border-line bg-surface p-6 shadow-card">
                   <BrandAsset src={model.logo ?? ''} alt={model.name} height={26} maxWidth={120} fallback={<span className="text-[16px] font-semibold">{model.name}</span>} />

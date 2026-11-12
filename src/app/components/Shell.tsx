@@ -25,14 +25,30 @@ export function Logo({ className, size = 28, to = '/chat' }: { className?: strin
  */
 export function BrandAsset({ src, alt, height, fallback, maxWidth = '100%' }: { src: string; alt: string; height: number; fallback?: React.ReactNode; maxWidth?: number | string }) {
   const [broken, setBroken] = useState(false)
-  useEffect(() => setBroken(false), [src])
+  const [densities, setDensities] = useState(true)
+  useEffect(() => {
+    setBroken(false)
+    setDensities(true)
+  }, [src])
   if (broken) return <>{fallback}</>
   // The brand files ship at 1x/2x/3x of their display size, so a retina screen
-  // gets real pixels instead of a downscale of one huge artwork.
-  const srcSet = /^\/brand\/[^@]+\.png$/i.test(src) ? `${src.replace(/\.png$/i, '@2x.png')} 2x, ${src.replace(/\.png$/i, '@3x.png')} 3x` : undefined
+  // gets real pixels instead of a downscale of one huge artwork. A replaced
+  // logo may not have the density variants: the first failure drops srcSet and
+  // falls back to the plain src before the word fallback is used.
+  const canSize = densities && /^\/brand\/[^@]+\.png$/i.test(src)
+  const srcSet = canSize ? `${src.replace(/\.png$/i, '@2x.png')} 2x, ${src.replace(/\.png$/i, '@3x.png')} 3x` : undefined
   // self-start: as a flex child (model cards) the image must not stretch to the
   // column width, which would letterbox it inside its own box.
-  return <img src={src} srcSet={srcSet} alt={alt} onError={() => setBroken(true)} className="block h-auto w-auto max-w-full self-start object-contain" style={{ height, maxWidth }} />
+  return (
+    <img
+      src={src}
+      srcSet={srcSet}
+      alt={alt}
+      onError={() => (canSize ? setDensities(false) : setBroken(true))}
+      className="block h-auto w-auto max-w-full self-start object-contain"
+      style={{ height, maxWidth }}
+    />
+  )
 }
 
 /** The supplied Aiden icon (public/brand), with a letter fallback if it is absent. */
