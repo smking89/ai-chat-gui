@@ -9,7 +9,7 @@ export function SignIn() {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="mx-auto flex h-16 w-full max-w-[1040px] items-center px-5 sm:px-8">
-        <Logo />
+        <Logo to="/" />
       </header>
       <main className="mx-auto grid w-full max-w-[1040px] flex-1 items-center gap-12 px-5 pb-16 sm:px-8 lg:grid-cols-[1fr_0.9fr]">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }} className="max-w-md">

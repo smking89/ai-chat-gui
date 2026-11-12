@@ -74,8 +74,10 @@ spend Koba Coin.
   map preset and seed).
 - `src/app/components/AssetDeliveryCard.tsx`: the delivery card (preview, file
   manifest, SHA-256 verification, download) and the Gate 1–3 progress rail.
+- `src/app/pages/Landing.tsx`: the public marketing page at `/` (models, gates,
+  FAQ); the app itself lives at `/chat` and `/c/:id`.
 - `src/app/pages/Chat.tsx`, `src/app/lib/turn.ts`: the thread, and the job held
-  outside React so it survives the move from `/` to `/c/:id`.
+  outside React so it survives the move from `/chat` to `/c/:id`.
 - `src/styles.css`: the koba.games palette — `#FFFFFF` paper, `#000000` type,
   `#F80801` accent. Everything rounded is a squircle via `corner-shape`; true
   circles use the `round` class.

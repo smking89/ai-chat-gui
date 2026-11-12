@@ -5,6 +5,7 @@ import { Shell } from './components/Shell'
 import { Spinner, ToastProvider } from './components/ui'
 import { ApiError, useMe } from './lib/api'
 import { Chat } from './pages/Chat'
+import { Landing } from './pages/Landing'
 import { Settings } from './pages/Settings'
 import { SetupNeeded, SignIn } from './pages/SignIn'
 
@@ -24,11 +25,11 @@ function Gate() {
   return (
     <Routes>
       <Route element={<Shell />}>
-        <Route index element={<Chat />} />
+        <Route path="chat" element={<Chat />} />
         <Route path="c/:id" element={<Chat />} />
         <Route path="settings" element={<Settings />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/chat" replace />} />
     </Routes>
   )
 }
@@ -38,7 +39,11 @@ export function App() {
     <QueryClientProvider client={client}>
       <ToastProvider>
         <BrowserRouter>
-          <Gate />
+          {/* The landing page is public; everything else sits behind the account gate. */}
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/*" element={<Gate />} />
+          </Routes>
         </BrowserRouter>
       </ToastProvider>
     </QueryClientProvider>

@@ -53,6 +53,11 @@
     color-scheme: light;
     overscroll-behavior-y: none;
   }
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
   body {
     background: var(--color-bg);
     color: var(--color-fg);

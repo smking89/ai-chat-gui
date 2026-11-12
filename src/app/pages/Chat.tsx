@@ -32,8 +32,8 @@ export function Chat() {
     const saved = localStorage.getItem(MODEL_KEY)
     return saved && MODELS.some((m) => m.id === saved) ? saved : DEFAULT_MODEL
   })
-  // The conversation this page created from "/", so it keeps showing the job
-  // during the moment between the server naming it and the URL changing.
+  // The conversation this page created from "/chat", so it keeps showing the
+  // job during the moment between the server naming it and the URL changing.
   const owned = useRef<string | null>(null)
   useEffect(() => {
     setDraft('')
@@ -140,7 +140,7 @@ export function Chat() {
       <div className="grid flex-1 place-items-center p-6 text-center">
         <div>
           <p className="text-[15px] font-medium">This job is not here any more.</p>
-          <button type="button" onClick={() => navigate('/')} className="mt-2 text-[13.5px] text-muted underline underline-offset-2 hover:text-fg">
+          <button type="button" onClick={() => navigate('/chat')} className="mt-2 text-[13.5px] text-muted underline underline-offset-2 hover:text-fg">
             Start a new one
           </button>
         </div>
