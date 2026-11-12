@@ -13,8 +13,8 @@ const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]'])
 // app without Sign in with Freebuff answers nobody.
 export const DEV_USER: FreebuffUser = {
   sub: 'dev-user',
-  name: 'Alex Morgan',
-  email: 'alex@example.com',
+  name: 'Local developer',
+  email: 'dev@localhost',
   email_verified: true,
 }
 

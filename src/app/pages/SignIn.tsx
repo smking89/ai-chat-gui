@@ -1,8 +1,8 @@
 import { motion } from 'motion/react'
 import { ArrowRight, Database } from 'lucide-react'
 
-import { BRAND, TAGLINE } from '../../shared/config'
-import { Logo, Mark } from '../components/Shell'
+import { BRAND, MODELS, TAGLINE } from '../../shared/config'
+import { BrandAsset, Logo } from '../components/Shell'
 
 export function SignIn() {
   const returnTo = encodeURIComponent(`${window.location.pathname}${window.location.search}`)
@@ -13,9 +13,9 @@ export function SignIn() {
       </header>
       <main className="mx-auto grid w-full max-w-[1040px] flex-1 items-center gap-12 px-5 pb-16 sm:px-8 lg:grid-cols-[1fr_0.9fr]">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }} className="max-w-md">
-          <h1 className="text-balance text-[40px] font-semibold leading-[1.05] tracking-[-0.03em] sm:text-[52px]">Ask {BRAND} anything</h1>
-          <p className="mt-4 text-[16px] leading-relaxed text-muted">{TAGLINE} Sign in to keep your conversations.</p>
-          <a href={`/auth/freebuff/signin?returnTo=${returnTo}`} className="mt-8 inline-flex h-12 items-center gap-2 rounded-control bg-fg px-5 text-[15px] font-medium text-white transition-colors hover:bg-[#2e2c27]">
+          <h1 className="text-balance text-[40px] font-semibold leading-[1.05] tracking-[-0.03em] sm:text-[52px]">Build Rust assets with {BRAND}</h1>
+          <p className="mt-4 text-[16px] leading-relaxed text-muted">{TAGLINE} Sign in to spend Koba Coin and keep your deliveries.</p>
+          <a href={`/auth/freebuff/signin?returnTo=${returnTo}`} className="mt-8 inline-flex h-12 items-center gap-2 rounded-control bg-accent px-5 text-[15px] font-semibold text-white transition-colors hover:bg-[#D00700]">
             <span className="grid size-5 place-items-center rounded-[6px] bg-white text-[11px] font-bold text-fg">F</span>
             Sign in with Freebuff
             <ArrowRight className="size-4" />
@@ -23,21 +23,25 @@ export function SignIn() {
           <p className="mt-4 text-[13px] text-faint">Uses your Freebuff account. No new password.</p>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.15, ease: [0.22, 1, 0.36, 1] }} className="hidden lg:block">
-          <div className="rounded-[28px] bg-surface p-7 shadow-pop">
-            <div className="flex justify-end">
-              <p className="max-w-[80%] rounded-bubble rounded-br-[8px] bg-surface-2 px-4 py-2.5 text-[14.5px]">What&apos;s a good way to start learning the piano as an adult?</p>
-            </div>
-            <div className="mt-6 flex gap-3.5">
-              <Mark size={26} className="mt-0.5 rounded-[8px]" />
-              <div className="prose-chat text-[14.5px]">
-                <p>Start with ten focused minutes a day rather than an hour on Sundays. Three things to do in week one:</p>
-                <ol>
-                  <li>Learn the C major scale with correct fingering, hands separately.</li>
-                  <li>Pick one song you love and learn its first four bars.</li>
-                  <li>Record yourself once a week so you can hear progress.</li>
-                </ol>
-              </div>
-            </div>
+          <div className="rounded-card border border-line bg-surface p-6 shadow-card">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-faint">Three ways to build</p>
+            <ul className="mt-5 space-y-5">
+              {MODELS.map((model) => (
+                <li key={model.id} className="flex items-center gap-4">
+                  <BrandAsset
+                    src={model.logo ?? ''}
+                    alt={model.name}
+                    height={22}
+                    maxWidth={84}
+                    fallback={<span className="text-[13px] font-semibold text-fg">{model.name}</span>}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-[10.5px] font-semibold uppercase tracking-[0.05em] text-faint">{model.domain}</span>
+                    <span className="block text-[12.5px] leading-snug text-muted">{model.description}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         </motion.div>
       </main>

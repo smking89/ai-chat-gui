@@ -1,12 +1,13 @@
+import type { JobParams } from '../../shared/config'
 import type { ChatEvent } from '../../shared/types'
 import { readError } from './api'
 
-export type ChatRequest = { conversationId?: string; content?: string; model?: string; regenerate?: boolean }
+export type ChatRequest = { conversationId?: string; content?: string; model?: string; params?: JobParams; regenerate?: boolean }
 
 /**
- * Sends one turn and reads the reply's server-sent events until the server
- * closes the stream. Resolves when the stream ends; rejects with ApiError when
- * the request itself is refused (limit reached, no key, bad input).
+ * Sends one job and reads its server-sent events until the server closes the
+ * stream. Resolves when the stream ends; rejects with ApiError when the request
+ * itself is refused (limit reached, no engine, bad input).
  */
 export async function streamChat(body: ChatRequest, options: { signal: AbortSignal; onEvent: (event: ChatEvent) => void }): Promise<void> {
   const response = await fetch('/api/chat', {

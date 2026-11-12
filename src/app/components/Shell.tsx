@@ -3,7 +3,7 @@ import { Menu as MenuIcon, MoreHorizontal, Pencil, Plus, Settings as SettingsIco
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router'
 
-import { BRAND } from '../../shared/config'
+import { BRAND, BRAND_ICON, BRAND_LOGO } from '../../shared/config'
 import type { Conversation } from '../../shared/types'
 import { useConversations, useDeleteConversation, useMe, useRenameConversation } from '../lib/api'
 import { cx } from '../lib/cx'
@@ -13,20 +13,38 @@ import { Avatar, Button, ConfirmDialog, Dialog, Input, Menu, useToast } from './
 
 export function Logo({ className, size = 28 }: { className?: string; size?: number }) {
   return (
-    <Link to="/" className={cx('inline-flex items-center gap-2.5 text-[15px] font-semibold tracking-tight', className)}>
-      <Mark size={size} />
-      {BRAND}
+    <Link to="/" aria-label={BRAND} className={cx('inline-flex items-center text-accent', className)}>
+      <BrandAsset src={BRAND_LOGO} alt={BRAND} height={size * 0.58} maxWidth={190} fallback={<span className="text-[15px] font-semibold tracking-tight text-fg">{BRAND}</span>} />
     </Link>
   )
 }
 
-/** The brand mark: a quill nib. */
+/**
+ * A supplied brand file (public/brand), shown as-is. Never redrawn: if the file
+ * is not there yet, the caller's word fallback is shown instead.
+ */
+export function BrandAsset({ src, alt, height, fallback, maxWidth = '100%' }: { src: string; alt: string; height: number; fallback?: React.ReactNode; maxWidth?: number | string }) {
+  const [broken, setBroken] = useState(false)
+  useEffect(() => setBroken(false), [src])
+  if (broken) return <>{fallback}</>
+  return <img src={src} alt={alt} onError={() => setBroken(true)} className="block h-auto w-auto max-w-full object-contain" style={{ height, maxWidth }} />
+}
+
+/** The supplied Aiden icon (public/brand), with a letter fallback if it is absent. */
 export function Mark({ size = 28, className }: { size?: number; className?: string }) {
   return (
-    <span className={cx('grid shrink-0 place-items-center rounded-[9px] bg-fg text-white', className)} style={{ width: size, height: size }} aria-hidden>
-      <svg viewBox="0 0 64 64" width={size * 0.62} height={size * 0.62} fill="currentColor">
-        <path d="M44 18c-9 1-17 8-20 18l-4 10 10-4c10-3 17-11 18-20l-9 9-3-3 8-10z" />
-      </svg>
+    <span className={cx('grid shrink-0 place-items-center', className)} style={{ width: size, height: size }} aria-hidden>
+      <BrandAsset
+        src={BRAND_ICON}
+        alt=""
+        height={size}
+        maxWidth={size}
+        fallback={
+          <span className="grid size-full place-items-center rounded-[9px] bg-accent font-semibold text-white" style={{ fontSize: Math.round(size * 0.5) }}>
+            A
+          </span>
+        }
+      />
     </span>
   )
 }
@@ -116,7 +134,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[13.5px] font-medium">{me?.user.name ?? 'Account'}</span>
             <span className="block truncate text-[12px] text-faint">
-              {me ? `${me.usage.used} of ${me.usage.limit} replies today` : ''}
+              {me ? `${me.usage.used} of ${me.usage.limit} jobs today` : ''}
             </span>
           </span>
           <SettingsIcon className="size-4 text-faint" />

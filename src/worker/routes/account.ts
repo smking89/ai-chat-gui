@@ -2,11 +2,10 @@ import { Hono } from 'hono'
 
 import { DAILY_MESSAGE_LIMIT, MODELS } from '../../shared/config'
 import type { Me, ModelInfo } from '../../shared/types'
-import { aiConfigured, availableModels } from '../ai'
-import { authMode, privateJson } from '../auth'
+import { authMode, isLoopback, privateJson } from '../auth'
 import { now, repliesToday, utcDay } from '../db'
 import type { AppContext } from '../env'
-import { seedStatements } from '../seed'
+import { engineMode } from '../koba'
 
 export const account = new Hono<AppContext>()
 
@@ -15,16 +14,12 @@ account.get('/me', async (c) => {
   const db = c.get('db')
   const mode = authMode(c.env, c.req.raw)
   const known = await db.prepare(`SELECT 1 FROM users WHERE owner_sub = ?`).bind(user.sub).first()
-  if (!known) {
-    const statements = [db.prepare(`INSERT INTO users (owner_sub, created_at) VALUES (?, ?)`).bind(user.sub, now())]
-    // Only the loopback development user gets a sample conversation.
-    if (mode === 'development') statements.push(...seedStatements(db, user.sub))
-    await db.batch(statements)
-  }
+  // New accounts start empty: no sample conversations, no sample deliveries.
+  if (!known) await db.prepare(`INSERT INTO users (owner_sub, created_at) VALUES (?, ?)`).bind(user.sub, now()).run()
   const body: Me = {
     user: { sub: user.sub, name: user.name, email: user.email, picture: user.picture },
     capabilities: {
-      ai: aiConfigured(c.env),
+      engine: engineMode(c.env, isLoopback(c.req.raw)) !== 'off',
       database: true,
       auth: mode === 'freebuff' ? 'freebuff' : 'development',
     },
@@ -34,12 +29,14 @@ account.get('/me', async (c) => {
 })
 
 account.get('/models', async (c) => {
-  const offered = aiConfigured(c.env) ? await availableModels(c.env) : null
+  const available = engineMode(c.env, isLoopback(c.req.raw)) !== 'off'
   const items: ModelInfo[] = MODELS.map((model) => ({
     id: model.id,
     name: model.name,
     description: model.description,
-    available: offered ? offered.has(model.id) : true,
+    domain: model.domain,
+    operation: model.operation,
+    available,
   }))
   c.header('Cache-Control', 'private, max-age=60')
   return c.json({ items })
@@ -49,6 +46,7 @@ account.delete('/account/conversations', async (c) => {
   const db = c.get('db')
   const owner = c.get('user').sub
   await db.batch([
+    db.prepare(`DELETE FROM deliveries WHERE owner_sub = ?`).bind(owner),
     db.prepare(`DELETE FROM messages WHERE owner_sub = ?`).bind(owner),
     db.prepare(`DELETE FROM conversations WHERE owner_sub = ?`).bind(owner),
   ])

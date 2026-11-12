@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
 
-import { isModelId } from '../ai'
+import { isModelId } from '../../shared/config'
 import { privateJson } from '../auth'
-import { mapConversation, mapMessage, now } from '../db'
+import { deliveriesByMessage, mapConversation, mapMessage, now } from '../db'
 import type { AppContext } from '../env'
 
 export const conversations = new Hono<AppContext>()
@@ -12,10 +12,10 @@ conversations.get('/', async (c) => {
   return privateJson(c, { items: (rows.results as Record<string, unknown>[]).map(mapConversation) })
 })
 
-// A reply row is created empty when generation starts (routes/chat.ts) and
-// filled in at the end. One still empty this long after has been orphaned by
-// a lost connection; it is removed when the conversation is next read.
-const ORPHAN_AFTER = 10 * 60_000
+// A reply row is created empty when a job starts (routes/chat.ts) and filled in
+// at the end. One still empty this long after has been orphaned by a lost
+// connection; it is removed when the conversation is next read.
+const ORPHAN_AFTER = 30 * 60_000
 
 conversations.get('/:id', async (c) => {
   const db = c.get('db')
@@ -29,9 +29,12 @@ conversations.get('/:id', async (c) => {
     db.prepare(`SELECT * FROM messages WHERE owner_sub = ? AND conversation_id = ? AND NOT (role = 'assistant' AND content = '') ORDER BY created_at ASC`).bind(owner, conversationId),
   ])
   if (!conversation.results[0]) return c.json({ error: 'Not found.' }, 404)
+  // Each reply carries its delivery.json, so the Asset Delivery Card is
+  // rebuilt from D1 on any load, not just while the job streams.
+  const deliveries = await deliveriesByMessage(db, owner, conversationId)
   return privateJson(c, {
     conversation: mapConversation(conversation.results[0] as Record<string, unknown>),
-    messages: (messages.results as Record<string, unknown>[]).map(mapMessage),
+    messages: (messages.results as Record<string, unknown>[]).map((row) => mapMessage(row, deliveries.get(row.id as string) ?? null)),
   })
 })
 
@@ -46,7 +49,7 @@ conversations.patch('/:id', async (c) => {
   if (input.title !== undefined) {
     if (typeof input.title !== 'string') return c.json({ error: 'Invalid title.' }, 400)
     title = input.title.replace(/\s+/g, ' ').trim().slice(0, 80)
-    if (!title) return c.json({ error: 'Give the chat a title.' }, 400)
+    if (!title) return c.json({ error: 'Give the job a title.' }, 400)
   }
   let model = existing.model as string
   if (input.model !== undefined) {
@@ -63,6 +66,7 @@ conversations.delete('/:id', async (c) => {
   const owner = c.get('user').sub
   const conversationId = c.req.param('id')
   await db.batch([
+    db.prepare(`DELETE FROM deliveries WHERE owner_sub = ? AND conversation_id = ?`).bind(owner, conversationId),
     db.prepare(`DELETE FROM messages WHERE owner_sub = ? AND conversation_id = ?`).bind(owner, conversationId),
     db.prepare(`DELETE FROM conversations WHERE owner_sub = ? AND id = ?`).bind(owner, conversationId),
   ])

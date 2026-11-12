@@ -12,18 +12,18 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 type ButtonSize = 'md' | 'sm' | 'icon' | 'icon-sm'
 
 const buttonBase =
-  'inline-flex shrink-0 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-control font-medium transition-[background-color,color,box-shadow,transform,opacity] duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0'
+  'inline-flex shrink-0 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-full font-medium transition-[background-color,color,box-shadow,transform,opacity] duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0'
 const buttonVariants: Record<ButtonVariant, string> = {
-  primary: 'bg-fg text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.12)] hover:bg-[#2e2c27]',
+  primary: 'bg-accent text-white hover:bg-[#D00700]',
   secondary: 'border border-line-strong bg-surface text-fg shadow-[0_1px_1px_rgb(27_26_23/0.04)] hover:bg-surface-2',
   ghost: 'text-muted hover:bg-surface-2 hover:text-fg',
   danger: 'bg-danger text-white hover:bg-[#b23526]',
 }
 const buttonSizes: Record<ButtonSize, string> = {
-  md: 'h-9 px-3.5 text-[13.5px]',
-  sm: 'h-8 px-3 text-[13px] rounded-tile',
+  md: 'h-9 px-4 text-[13.5px]',
+  sm: 'h-8 px-3.5 text-[13px]',
   icon: 'size-9',
-  'icon-sm': 'size-8 rounded-tile',
+  'icon-sm': 'size-8',
 }
 
 export function Button({
@@ -42,7 +42,7 @@ export function Button({
 }
 
 export const inputClass =
-  'h-9 w-full min-w-0 rounded-control border border-line-strong bg-surface px-3 text-[13.5px] text-fg placeholder:text-faint transition-[border-color,box-shadow] focus:border-fg/40 focus:outline-none focus:ring-[3px] focus:ring-fg/8 disabled:opacity-60'
+  'h-9 w-full min-w-0 rounded-control border border-line-strong bg-surface px-3 text-[13.5px] text-fg placeholder:text-faint transition-[border-color,box-shadow] focus:border-accent focus:outline-none focus:ring-[3px] focus:ring-accent/15 disabled:opacity-60'
 
 export function Input({ className, ...rest }: ComponentPropsWithoutRef<'input'>) {
   return <input className={cx(inputClass, className)} {...rest} />

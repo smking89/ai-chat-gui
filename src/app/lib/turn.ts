@@ -1,25 +1,29 @@
-// The reply currently being generated, held outside React so it survives the
-// move from "/" to "/c/:id" when a first message creates its conversation.
-// There is at most one turn at a time; the page for its conversation renders
-// it under the saved messages and folds it into the query cache when done.
+// The job currently running, held outside React so it survives the move from
+// "/" to "/c/:id" when a first brief creates its conversation. There is at most
+// one turn at a time; the page for its conversation renders it under the saved
+// messages and folds it into the query cache when done.
 
 import { useSyncExternalStore } from 'react'
 import type { QueryClient } from '@tanstack/react-query'
 
-import type { ChatEvent, Conversation, Me, Message } from '../../shared/types'
+import type { ChatEvent, Conversation, Delivery, Me, Message, StageEvent } from '../../shared/types'
 import { ApiError, type ConversationPage } from './api'
 import { streamChat, type ChatRequest } from './stream'
 
 export type Turn = {
   /** Set once the server has told us which conversation this is. */
   conversationId: string | null
-  /** The user message being answered (optimistic until `start` arrives). */
+  /** The brief being built (optimistic until `start` arrives). */
   userMessage: Message | null
   assistantMessageId: string | null
   text: string
   status: 'waiting' | 'streaming' | 'error'
   error: string | null
   model: string
+  /** Gate 1–3 progress, newest state per gate. */
+  stages: StageEvent[]
+  /** The bundle, once koba_engine delivers it. */
+  delivery: Delivery | null
   stop(): void
 }
 
@@ -48,7 +52,7 @@ const localId = () => `local-${Math.random().toString(36).slice(2)}`
 /**
  * Starts a turn. `onConversation` fires once when a new conversation's id is
  * known (so the page can navigate to it). Rejects only when the request was
- * refused before any reply began; stream errors end up on the turn itself.
+ * refused before the job began; stream errors end up on the turn itself.
  */
 export async function startTurn(
   client: QueryClient,
@@ -59,7 +63,16 @@ export async function startTurn(
   const controller = new AbortController()
   const optimisticUser: Message | null = request.regenerate
     ? null
-    : { id: localId(), conversationId: request.conversationId ?? '', role: 'user', content: request.content ?? '', model: null, interrupted: false, createdAt: Date.now() }
+    : {
+        id: localId(),
+        conversationId: request.conversationId ?? '',
+        role: 'user',
+        content: request.content ?? '',
+        model: null,
+        interrupted: false,
+        delivery: null,
+        createdAt: Date.now(),
+      }
   set({
     conversationId: request.conversationId ?? null,
     userMessage: optimisticUser,
@@ -68,6 +81,8 @@ export async function startTurn(
     status: 'waiting',
     error: null,
     model: request.model ?? '',
+    stages: [],
+    delivery: null,
     stop: () => controller.abort(),
   })
 
@@ -108,8 +123,14 @@ export async function startTurn(
         }
         break
       }
-      case 'delta':
-        update({ text: turn.text + event.text, status: 'streaming' })
+      case 'stage': {
+        // One gate reports several times (running, then done); keep its latest.
+        const others = turn.stages.filter((stage) => stage.gate !== event.gate)
+        update({ stages: [...others, event].sort((a, b) => a.gate - b.gate), status: 'streaming' })
+        break
+      }
+      case 'delivery':
+        update({ delivery: event.delivery, status: 'streaming' })
         break
       case 'done':
         finish(event.message, event.usage)
@@ -127,19 +148,23 @@ export async function startTurn(
       const current = turn
       finish(
         current.text && current.assistantMessageId && current.conversationId
-          ? { id: current.assistantMessageId, conversationId: current.conversationId, role: 'assistant', content: current.text, model: current.model || null, interrupted: true, createdAt: Date.now() }
+          ? {
+              id: current.assistantMessageId,
+              conversationId: current.conversationId,
+              role: 'assistant',
+              content: current.text,
+              model: current.model || null,
+              interrupted: true,
+              delivery: current.delivery,
+              createdAt: Date.now(),
+            }
           : null,
       )
     }
   } catch (error) {
     if (controller.signal.aborted) {
-      // Stopped by the user: keep the partial reply, marked as such.
-      const current = turn
-      finish(
-        current?.text && current.assistantMessageId && current.conversationId
-          ? { id: current.assistantMessageId, conversationId: current.conversationId, role: 'assistant', content: current.text, model: current.model || null, interrupted: true, createdAt: Date.now() }
-          : null,
-      )
+      // Stopped by the user: nothing is delivered, so nothing is kept.
+      finish(null)
       return
     }
     set(null)

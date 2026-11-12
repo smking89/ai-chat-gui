@@ -1,18 +1,24 @@
 import { Hono } from 'hono'
 
-import { aiConfigured } from './ai'
+import { isLoopback } from './auth'
 import { authMode, getAuth, requireUser } from './auth'
 import { requireDb } from './db'
 import type { AppContext, Env } from './env'
+import { engineMode } from './koba'
 import { account } from './routes/account'
 import { chat } from './routes/chat'
 import { conversations } from './routes/conversations'
+import { deliveries } from './routes/deliveries'
 
 const app = new Hono<AppContext>()
 
 app.get('/api/auth/status', (c) => {
   c.header('Cache-Control', 'private, no-store')
-  return c.json({ mode: authMode(c.env, c.req.raw), database: Boolean(c.env.DB), ai: aiConfigured(c.env) })
+  return c.json({
+    mode: authMode(c.env, c.req.raw),
+    database: Boolean(c.env.DB),
+    engine: engineMode(c.env, isLoopback(c.req.raw)) !== 'off',
+  })
 })
 app.get('/api/health', (c) => c.json({ ok: true }))
 
@@ -21,6 +27,7 @@ api.use('*', requireUser, requireDb)
 api.route('/', account)
 api.route('/conversations', conversations)
 api.route('/chat', chat)
+api.route('/deliveries', deliveries)
 app.route('/api', api)
 
 app.onError((error, c) => {

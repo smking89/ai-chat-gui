@@ -43,7 +43,7 @@ export function Composer({
   }
   const over = value.length > MAX_MESSAGE_CHARS
   return (
-    <div className={cx('rounded-[22px] bg-surface shadow-composer transition-[box-shadow] focus-within:shadow-[0_1px_2px_rgb(27_26_23/0.05),0_8px_32px_-12px_rgb(27_26_23/0.22),0_0_0_1px_rgb(27_26_23/0.14)]', disabled && 'opacity-70')}>
+    <div className={cx('rounded-[22px] border border-line-strong bg-surface shadow-composer transition-[box-shadow] focus-within:shadow-[0_1px_2px_rgb(0_0_0/0.05),0_8px_32px_-12px_rgb(0_0_0/0.18),0_0_0_1px_rgb(0_0_0/0.16)]', disabled && 'opacity-70')}>
       <textarea
         ref={ref}
         rows={1}
@@ -60,7 +60,7 @@ export function Composer({
           {over ? `${value.length.toLocaleString()} / ${MAX_MESSAGE_CHARS.toLocaleString()}` : ''}
         </span>
         {busy ? (
-          <button type="button" onClick={onStop} aria-label="Stop" className="grid size-8 place-items-center rounded-full bg-fg text-white transition-transform active:scale-95">
+          <button type="button" onClick={onStop} aria-label="Stop" className="grid size-8 place-items-center rounded-full bg-accent text-white transition-transform hover:bg-[#D00700] active:scale-95">
             <Square className="size-3.5 fill-current" />
           </button>
         ) : (
@@ -69,7 +69,7 @@ export function Composer({
             onClick={onSend}
             disabled={!canSend}
             aria-label="Send"
-            className="grid size-8 place-items-center rounded-full bg-fg text-white transition-[opacity,transform] active:scale-95 disabled:opacity-25"
+            className="grid size-8 place-items-center rounded-full bg-accent text-white transition-[opacity,transform,background-color] hover:bg-[#D00700] active:scale-95 disabled:opacity-25"
           >
             <ArrowUp className="size-4" />
           </button>

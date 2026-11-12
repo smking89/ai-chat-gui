@@ -1,8 +1,7 @@
-import { ArrowUpRight } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 
-import { DAILY_MESSAGE_LIMIT, FREEBUFF_API_KEYS_URL } from '../../shared/config'
+import { DAILY_MESSAGE_LIMIT } from '../../shared/config'
 import { Avatar, Badge, Button, ConfirmDialog, useToast } from '../components/ui'
 import { useDeleteAllConversations, useMe } from '../lib/api'
 import { untilLabel } from '../lib/format'
@@ -16,15 +15,9 @@ export function Settings() {
   if (!me) return null
   const connections: { label: string; ok: boolean; detail: string; action?: React.ReactNode }[] = [
     {
-      label: 'Freebuff API',
-      ok: me.capabilities.ai,
-      detail: me.capabilities.ai ? 'OPENAI_API_KEY is set' : 'OPENAI_API_KEY is not set',
-      action: me.capabilities.ai ? undefined : (
-        <a href={FREEBUFF_API_KEYS_URL} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-1 rounded-tile px-2.5 text-[13px] font-medium text-fg transition-colors hover:bg-surface-2">
-          Get a key
-          <ArrowUpRight className="size-3.5" />
-        </a>
-      ),
+      label: 'Build service',
+      ok: me.capabilities.engine,
+      detail: me.capabilities.engine ? 'Builds are running' : 'Not configured',
     },
     { label: 'Database', ok: me.capabilities.database, detail: 'D1 via the DB binding' },
     { label: 'Sign in with Freebuff', ok: me.capabilities.auth === 'freebuff', detail: me.capabilities.auth === 'freebuff' ? 'FREEBUFF_CLIENT_ID is set' : 'Using the local development user' },
@@ -58,12 +51,12 @@ export function Settings() {
           <div className="mt-3 rounded-card bg-surface p-4 shadow-card">
             <div className="flex items-baseline justify-between">
               <p className="text-[15px] font-medium">
-                {me.usage.used} of {DAILY_MESSAGE_LIMIT} replies today
+                {me.usage.used} of {DAILY_MESSAGE_LIMIT} jobs today
               </p>
               <p className="text-[12.5px] text-faint">Resets {untilLabel(me.usage.resetsAt)}</p>
             </div>
             <div className="mt-3 h-1.5 overflow-hidden rounded-[3px] bg-surface-2">
-              <div className="h-full rounded-[3px] bg-fg transition-[width] duration-500" style={{ width: `${Math.min(100, Math.round((me.usage.used / DAILY_MESSAGE_LIMIT) * 100))}%` }} />
+              <div className="h-full rounded-[3px] bg-accent transition-[width] duration-500" style={{ width: `${Math.min(100, Math.round((me.usage.used / DAILY_MESSAGE_LIMIT) * 100))}%` }} />
             </div>
           </div>
         </section>

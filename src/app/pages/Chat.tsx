@@ -1,14 +1,15 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { ArrowUpRight, KeyRound } from 'lucide-react'
+import { PlugZap } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 
-import { BRAND, DEFAULT_MODEL, FREEBUFF_API_KEYS_URL, MODELS, SUGGESTIONS } from '../../shared/config'
+import { BRAND, DEFAULT_MODEL, defaultParams, isModelId, modelById, MODELS, SUGGESTIONS, type JobParams, type ModelId } from '../../shared/config'
 import type { Message } from '../../shared/types'
 import { Composer } from '../components/Composer'
 import { AssistantMessage, UserMessage } from '../components/Message'
 import { ModelPicker } from '../components/ModelPicker'
+import { ParameterBar } from '../components/ParameterBar'
 import { Spinner, useToast } from '../components/ui'
 import { ApiError, useConversation, useMe, useSetConversationModel } from '../lib/api'
 import { untilLabel } from '../lib/format'
@@ -31,8 +32,8 @@ export function Chat() {
     const saved = localStorage.getItem(MODEL_KEY)
     return saved && MODELS.some((m) => m.id === saved) ? saved : DEFAULT_MODEL
   })
-  // The conversation this page created from "/", so it keeps showing the
-  // reply during the moment between the server naming it and the URL changing.
+  // The conversation this page created from "/", so it keeps showing the job
+  // during the moment between the server naming it and the URL changing.
   const owned = useRef<string | null>(null)
   useEffect(() => {
     setDraft('')
@@ -41,10 +42,28 @@ export function Chat() {
   const conversation = page.data?.conversation
   const saved = page.data?.messages ?? []
   const model = conversation?.model ?? newModel
+  const activeModel: ModelId = isModelId(model) ? model : DEFAULT_MODEL
+  const definition = modelById(activeModel)
   const mine = turn !== null && (turn.conversationId === (id ?? null) || (id === undefined && turn.conversationId === owned.current))
   const busy = mine && turn.status !== 'error'
-  const ai = me?.capabilities.ai ?? true
+  const engine = me?.capabilities.engine ?? true
   const limitReached = me ? me.usage.used >= me.usage.limit && !busy : false
+
+  // The parameter bar's values, per model: switching models resets to that
+  // model's defaults rather than carrying a mismatched key across.
+  const [params, setParams] = useState<JobParams>(() => defaultParams(DEFAULT_MODEL))
+  // Each model (and each conversation, which carries its own model) starts from
+  // that model's defaults: a stale key from another model would be refused.
+  useEffect(() => {
+    setParams(defaultParams(activeModel))
+  }, [activeModel, id])
+  const changeModel = (next: string) => {
+    if (conversation) setConversationModel.mutate({ id: conversation.id, model: next })
+    else {
+      setNewModel(next)
+      localStorage.setItem(MODEL_KEY, next)
+    }
+  }
 
   const send = useCallback(
     async (content: string) => {
@@ -54,7 +73,7 @@ export function Chat() {
       try {
         await startTurn(
           client,
-          { conversationId: id, content, model },
+          { conversationId: id, content, model: activeModel, params },
           {
             onConversation: (created) => {
               owned.current = created.id
@@ -65,31 +84,23 @@ export function Chat() {
       } catch (error) {
         setDraft(content)
         if (error instanceof ApiError && error.code === 'limit') void client.invalidateQueries({ queryKey: ['me'] })
-        toast(error instanceof Error ? error.message : 'Could not send this message', 'danger')
+        toast(error instanceof Error ? error.message : 'Could not start this job', 'danger')
       }
     },
-    [client, id, model, navigate, toast],
+    [activeModel, client, id, navigate, params, toast],
   )
 
   const regenerate = useCallback(async () => {
     if (!id) return
     try {
-      await startTurn(client, { conversationId: id, regenerate: true, model })
+      await startTurn(client, { conversationId: id, regenerate: true, model: activeModel, params })
     } catch (error) {
-      toast(error instanceof Error ? error.message : 'Could not regenerate', 'danger')
+      toast(error instanceof Error ? error.message : 'Could not rebuild this job', 'danger')
     }
-  }, [client, id, model, toast])
+  }, [activeModel, client, id, params, toast])
 
-  const changeModel = (next: string) => {
-    if (conversation) setConversationModel.mutate({ id: conversation.id, model: next })
-    else {
-      setNewModel(next)
-      localStorage.setItem(MODEL_KEY, next)
-    }
-  }
-
-  // What the thread shows: the saved messages, plus the turn in flight. While
-  // regenerating, saved replies after the last question are hidden.
+  // What the thread shows: the saved messages, plus the job in flight. While
+  // regenerating, saved replies after the last brief are hidden.
   let messages: Message[] = saved
   if (mine && turn && !turn.userMessage) {
     const lastUser = [...saved].reverse().find((m) => m.role === 'user')
@@ -99,7 +110,7 @@ export function Chat() {
   const lastSavedAssistant = [...messages].reverse().find((m) => m.role === 'assistant')
   const empty = !id && messages.length === 0 && !mine
 
-  // Follow the reply as it streams, unless the reader has scrolled up.
+  // Follow the job as it streams, unless the reader has scrolled up.
   const scroller = useRef<HTMLDivElement>(null)
   const stick = useRef(true)
   const onScroll = () => {
@@ -107,9 +118,12 @@ export function Chat() {
     if (el) stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
   }
   useEffect(() => {
+    // Nothing to follow on the empty state: pinning to the bottom would push
+    // the heading and suggestions off-screen on short viewports.
+    if (empty) return
     const el = scroller.current
     if (el && stick.current) el.scrollTop = el.scrollHeight
-  }, [messages.length, pendingUser, turn?.text, id])
+  }, [empty, messages.length, pendingUser, turn?.text, turn?.stages.length, turn?.delivery, id])
   useEffect(() => {
     stick.current = true
   }, [id])
@@ -125,7 +139,7 @@ export function Chat() {
     return (
       <div className="grid flex-1 place-items-center p-6 text-center">
         <div>
-          <p className="text-[15px] font-medium">This chat is not here any more.</p>
+          <p className="text-[15px] font-medium">This job is not here any more.</p>
           <button type="button" onClick={() => navigate('/')} className="mt-2 text-[13.5px] text-muted underline underline-offset-2 hover:text-fg">
             Start a new one
           </button>
@@ -143,8 +157,8 @@ export function Chat() {
       <div ref={scroller} onScroll={onScroll} className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-[760px] px-4 pb-6 pt-2 md:px-6">
           {empty ? (
-            ai ? (
-              <EmptyState onPick={(text) => void send(text)} disabled={limitReached} />
+            engine ? (
+              <EmptyState model={activeModel} onPick={(text) => void send(text)} disabled={limitReached} />
             ) : (
               <SetupCard />
             )
@@ -154,7 +168,14 @@ export function Chat() {
                 message.role === 'user' ? (
                   <UserMessage key={message.id} content={message.content} />
                 ) : (
-                  <AssistantMessage key={message.id} content={message.content} interrupted={message.interrupted} onRegenerate={message.id === lastSavedAssistant?.id && !mine && ai ? regenerate : undefined} />
+                  <AssistantMessage
+                    key={message.id}
+                    content={message.content}
+                    model={message.model}
+                    delivery={message.delivery}
+                    interrupted={message.interrupted}
+                    onRegenerate={message.id === lastSavedAssistant?.id && !mine && engine ? regenerate : undefined}
+                  />
                 ),
               )}
               {pendingUser && <UserMessage key={pendingUser.id} content={pendingUser.content} />}
@@ -162,7 +183,10 @@ export function Chat() {
                 <AssistantMessage
                   key={turn.assistantMessageId ?? 'pending'}
                   content={turn.text}
+                  model={turn.model || activeModel}
                   streaming={turn.status !== 'error'}
+                  stages={turn.stages}
+                  delivery={turn.delivery}
                   error={turn.status === 'error' ? turn.error : null}
                   onRetry={() => {
                     dismissTurn()
@@ -176,28 +200,28 @@ export function Chat() {
       </div>
 
       <div className="mx-auto w-full max-w-[760px] px-4 pb-4 md:px-6 md:pb-6">
-        {!ai && !empty ? (
+        {!engine && !empty ? (
           <Notice>
-            Add an API key to continue.{' '}
-            <a href={FREEBUFF_API_KEYS_URL} target="_blank" rel="noreferrer" className="font-medium text-fg underline underline-offset-2">
-              Get one
-            </a>
+            Builds are paused until Aiden’s build service is connected.
           </Notice>
         ) : limitReached && me ? (
           <Notice>
-            You have used today&apos;s {me.usage.limit} replies. More {untilLabel(me.usage.resetsAt)}.
+            You have used today&apos;s {me.usage.limit} jobs. More {untilLabel(me.usage.resetsAt)}.
           </Notice>
         ) : (
-          <Composer
-            value={draft}
-            onChange={setDraft}
-            onSend={() => void send(draft)}
-            onStop={() => turn?.stop()}
-            busy={busy}
-            disabled={!ai}
-            placeholder={ai ? `Message ${BRAND}` : 'Add an API key to start chatting'}
-            autoFocus
-          />
+          <>
+            <ParameterBar model={activeModel} params={params} onChange={setParams} disabled={busy || !engine} />
+            <Composer
+              value={draft}
+              onChange={setDraft}
+              onSend={() => void send(draft)}
+              onStop={() => turn?.stop()}
+              busy={busy}
+              disabled={!engine}
+              placeholder={engine ? `Describe a ${definition.domain.toLowerCase()} build…` : 'Builds are not available yet'}
+              autoFocus
+            />
+          </>
         )}
       </div>
     </div>
@@ -208,18 +232,23 @@ function Notice({ children }: { children: React.ReactNode }) {
   return <p className="rounded-control bg-surface-2 px-4 py-3 text-center text-[13.5px] text-muted">{children}</p>
 }
 
-function EmptyState({ onPick, disabled }: { onPick: (text: string) => void; disabled: boolean }) {
+function EmptyState({ model, onPick, disabled }: { model: ModelId; onPick: (text: string) => void; disabled: boolean }) {
+  const definition = modelById(model)
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }} className="flex min-h-[52vh] flex-col items-center justify-end pb-8 text-center">
-      <h1 className="text-balance text-[28px] font-semibold tracking-[-0.02em] md:text-[32px]">What can I help with?</h1>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">{definition.domain}</p>
+      <h1 className="mt-2 text-balance text-[28px] font-semibold tracking-[-0.02em] md:text-[32px]">What are we building?</h1>
+      <p className="mt-2 max-w-md text-[13.5px] leading-relaxed text-muted">
+        {definition.name} builds {definition.domain.toLowerCase()}. Every build is quoted in Koba Coin when it runs.
+      </p>
       <ul className="mt-7 grid w-full gap-2 sm:grid-cols-2">
-        {SUGGESTIONS.map((text) => (
+        {SUGGESTIONS[model].map((text) => (
           <li key={text}>
             <button
               type="button"
               disabled={disabled}
               onClick={() => onPick(text)}
-              className="h-full w-full rounded-card border border-line bg-surface px-4 py-3 text-left text-[13.5px] leading-snug text-muted shadow-[0_1px_1px_rgb(27_26_23/0.03)] transition-[border-color,color,background-color] hover:border-line-strong hover:text-fg disabled:opacity-50"
+              className="h-full w-full rounded-card border border-line bg-surface px-4 py-3 text-left text-[13.5px] leading-snug text-muted transition-[border-color,color,background-color] hover:border-line-strong hover:text-fg disabled:opacity-50"
             >
               {text}
             </button>
@@ -230,27 +259,18 @@ function EmptyState({ onPick, disabled }: { onPick: (text: string) => void; disa
   )
 }
 
-/** Shown to everyone until the server has an API key. The key itself never comes here. */
+/** Shown to everyone until the build service is connected. */
 function SetupCard() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }} className="flex min-h-[52vh] flex-col items-center justify-end pb-8 text-center">
-      <div className="grid size-12 place-items-center rounded-card bg-surface shadow-card">
-        <KeyRound className="size-5 text-muted" />
+      <div className="grid size-12 place-items-center rounded-card border border-line bg-surface text-accent">
+        <PlugZap className="size-5" />
       </div>
-      <h1 className="mt-5 text-[22px] font-semibold tracking-[-0.02em]">Connect the Freebuff API</h1>
+      <h1 className="mt-5 text-[22px] font-semibold tracking-[-0.02em]">Builds aren’t connected</h1>
       <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-muted">
-        Add your API key as <code className="rounded-[6px] bg-surface-2 px-1.5 py-0.5 font-mono text-[12.5px] text-fg">OPENAI_API_KEY</code> and {BRAND} starts answering.
+        {BRAND} needs its build service before it can generate assets.
       </p>
-      <a
-        href={FREEBUFF_API_KEYS_URL}
-        target="_blank"
-        rel="noreferrer"
-        className="mt-6 inline-flex h-10 items-center gap-1.5 rounded-control bg-fg px-4 text-[14px] font-medium text-white transition-colors hover:bg-[#2e2c27]"
-      >
-        Get an API key
-        <ArrowUpRight className="size-4" />
-      </a>
-      <p className="mt-4 text-[12.5px] text-faint">Locally in .env. On Freebuff Sites, in Secrets.</p>
+      <p className="mt-6 text-[12.5px] text-faint">Configured server-side, in .env or Sites → Secrets.</p>
     </motion.div>
   )
 }

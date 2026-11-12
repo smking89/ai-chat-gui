@@ -1,7 +1,10 @@
 import { Check, Copy, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 
+import type { ModelId } from '../../shared/config'
+import type { Delivery, StageEvent } from '../../shared/types'
 import { cx } from '../lib/cx'
+import { AssetDeliveryCard, StageRail } from './AssetDeliveryCard'
 import { Markdown } from './Markdown'
 import { Mark } from './Shell'
 
@@ -20,14 +23,22 @@ export function AssistantMessage({
   onRegenerate,
   error,
   onRetry,
+  model,
+  stages,
+  delivery,
 }: {
   content: string
-  /** Still receiving text: show the caret, hide the actions. */
+  /** Still receiving progress: show the caret, hide the actions. */
   streaming?: boolean
   interrupted?: boolean
   onRegenerate?: () => void
   error?: string | null
   onRetry?: () => void
+  model?: string | null
+  /** Gate 1–3 progress while the job runs. */
+  stages?: StageEvent[]
+  /** The delivered bundle, once koba_engine has finished. */
+  delivery?: Delivery | null
 }) {
   const [copied, setCopied] = useState(false)
   const copy = async () => {
@@ -39,20 +50,23 @@ export function AssistantMessage({
       /* clipboard unavailable */
     }
   }
-  const waiting = streaming && !content
+  const waiting = streaming && !content && !delivery && !stages?.length
+  const active = model === 'graft' || model === 'vest' || model === 'terra' ? (model as ModelId) : 'graft'
   return (
     <div className="group flex gap-3.5">
       <Mark size={26} className="mt-0.5 rounded-[8px]" />
       <div className="min-w-0 flex-1 pt-0.5">
         {waiting ? (
-          <span className="thinking inline-flex h-[24px] items-center gap-1" aria-label="Thinking">
+          <span className="thinking inline-flex h-[24px] items-center gap-1" aria-label="Starting">
             <span />
             <span />
             <span />
           </span>
-        ) : (
+        ) : content ? (
           <Markdown className={cx('prose-chat', streaming && 'streaming')}>{content}</Markdown>
-        )}
+        ) : null}
+        {stages && stages.length > 0 && <StageRail model={active} stages={stages} />}
+        {delivery && <AssetDeliveryCard delivery={delivery} />}
         {error && (
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-danger">
             <span>{error}</span>

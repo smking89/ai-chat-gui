@@ -51,7 +51,7 @@ export const useMe = () =>
     refetchOnWindowFocus: true,
     // Until an API key is configured, keep checking so the app unlocks on its
     // own once the owner adds one.
-    refetchInterval: (query) => (query.state.data && !query.state.data.capabilities.ai ? 4_000 : false),
+    refetchInterval: (query) => (query.state.data && !query.state.data.capabilities.engine ? 4_000 : false),
   })
 export const useModels = () => useQuery({ queryKey: ['models'], queryFn: () => api<{ items: ModelInfo[] }>('/models'), staleTime: 60_000 })
 export const useConversations = () => useQuery({ queryKey: ['conversations'], queryFn: () => api<{ items: Conversation[] }>('/conversations') })

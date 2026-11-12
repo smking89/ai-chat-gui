@@ -11,9 +11,10 @@
   // Local development bindings. Freebuff Sites attaches the real DB binding on
   // deploy (sites_add_storage) and injects the FREEBUFF_* vars.
   //
-  // Local secrets come from `.env` (see .env.example): OPENAI_API_KEY is the
-  // Freebuff API key. Do not add a `.dev.vars` file; its presence stops
-  // Wrangler from reading `.env` and `.env.local`.
+  // Local secrets come from `.env` (see .env.example): KOBA_ENGINE_URL and
+  // KOBA_ENGINE_API_KEY point the Worker at koba_engine. Do not add a
+  // `.dev.vars` file; its presence stops Wrangler from reading `.env` and
+  // `.env.local`.
   "d1_databases": [
     { "binding": "DB", "database_name": "ai-chat", "database_id": "00000000-0000-0000-0000-000000000000" }
   ],
